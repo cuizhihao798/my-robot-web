@@ -93,78 +93,49 @@ chart_data = pd.DataFrame(
 st.line_chart(chart_data, height=250)
 st.caption("注：标准施加压力区间为 14.5kN - 16.5kN。波动符合机械臂反馈特征。")
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-import time
-from datetime import datetime, timedelta
-
-# 1. 页面配置
-st.set_page_config(page_title="中南大学-自动化防溜系统", layout="wide")
-
-# 2. 模拟数据库持久化 (使用 Session State)
-# 初始化：如果没数据，或者车次变了，就重新生成
-if 'current_train' not in st.session_state:
-    st.session_state.current_train = ""
-if 'history_db' not in st.session_state:
-    st.session_state.history_db = pd.DataFrame()
-
-# 3. 侧边栏：输入车次
-with st.sidebar:
-    st.header("🤖 机器人状态遥测")
-    train_id = st.text_input("输入当前作业车次", value="G8021-重载")
-    battery = st.slider("剩余电量", 0, 100, 85)
-    st.markdown("---")
-    st.info("检测到新车次输入后，系统将自动同步历史台账")
-
-# --- 【核心逻辑：自动感应车次变换并生成历史】 ---
-if train_id != st.session_state.current_train:
-    # 1. 更新当前车次记录
-    st.session_state.current_train = train_id
-    
-    # 2. 模拟生成该车次的 4 条错开时间的历史记录
-    base_time = datetime.now()
-    new_data = pd.DataFrame({
-        '记录时间': [
-            (base_time - timedelta(minutes=45)).strftime("%H:%M:%S"),
-            (base_time - timedelta(minutes=30)).strftime("%H:%M:%S"),
-            (base_time - timedelta(minutes=15)).strftime("%H:%M:%S"),
-            (base_time - timedelta(seconds=10)).strftime("%H:%M:%S")
-        ],
-        '车次编号': [train_id] * 4,
-        '目标轴位': ['1号轴', '2号轴', '3号轴', '4号轴'],
-        '铁鞋状态': ['✅ 已收回(归位)', '✅ 已收回(归位)', '🔒 已布放(锁死)', '⚠️ 作业中'],
-        '夹紧压力(kN)': [15.2, 14.8, 15.6, 8.4],
-        '对位误差(mm)': [0.11, 0.08, 0.13, 0.45]
-    })
-    # 存入 Session 供演示
-    st.session_state.history_db = new_data
-    st.toast(f"检测到新车次 {train_id}，已调取作业历史数据")
-
-# 4. 主界面展示
-st.title("🚄 轨道机器人防溜作业数字孪生大屏")
-st.markdown(f"**中南大学控制工程实验室** | 监控目标：`{train_id}`")
-
-# 顶部指标
-c1, c2, c3 = st.columns(3)
-c1.metric("系统电量", f"{battery}%")
-c2.metric("当前轴位", "4号轴")
-c3.metric("总计完成", f"{len(st.session_state.history_db)}/4")
-
-st.markdown("---")
-
-# 5. 实时压力折线图 (保留你的创意)
-st.subheader("📊 实时铁鞋压力监测 (数据流)")
-chart_data = pd.DataFrame(
-    np.random.randn(20, 2) * 0.3 + 15,
-    columns=['左侧压力', '右侧压力']
-)
-st.line_chart(chart_data, height=200)
-
-# 6. 自动化报表展示 (核心演示区)
+# ==========================================
+# 5. 报表系统 - 动态感应式历史数据 (仅修改此处)
+# ==========================================
 st.subheader("📑 铁鞋作业历史数据报表 (自动生成)")
-# 实时显示根据车次感应生成的表格
-st.dataframe(st.session_state.history_db, use_container_width=True)
+
+# 核心逻辑：根据车次号产生“种子”，确保同一车次数据固定，不同车次数据不同
+# 使用车次号字符串的长度和内容作为随机种子
+import random
+seed_value = sum(ord(c) for c in train_id)
+random.seed(seed_value)
+np.random.seed(seed_value)
+
+# 随机决定该车次的记录条数 (3到6条)
+num_rows = random.randint(3, 6)
+
+# 随机生成错开的时间点
+base_time = datetime.now()
+time_list = [(base_time - timedelta(minutes=random.randint(10, 60))).strftime("%H:%M:%S") for _ in range(num_rows)]
+time_list.sort() # 按时间先后排序
+
+# 构造动态报表
+dynamic_history = pd.DataFrame({
+    '记录时间': time_list,
+    '车次编号': [train_id] * num_rows,
+    '股道编号': [f"{random.randint(1, 5)}道"] * num_rows, # 增加股道信息，体现变化
+    '目标轴位': [f"{i+1}号轴" for i in range(num_rows)],
+    '布放方位': [random.choice(['左侧(Leading)', '右侧(Trailing)']) for _ in range(num_rows)],
+    '铁鞋状态': [random.choice(['✅ 已收回(归位)', '🔒 已布放(锁死)', '✅ 已收回(归位)']) for _ in range(num_rows-1)] + ['⚠️ 作业中'],
+    '对位误差(mm)': [round(random.uniform(0.05, 0.45), 2) for _ in range(num_rows)],
+    '作业结果': ['✅ 成功'] * (num_rows - 1) + ['⏳ 进行中']
+})
+
+# 渲染表格
+st.dataframe(dynamic_history, use_container_width=True)
+
+# 报表下载功能
+csv = dynamic_history.to_csv(index=False).encode('utf-8-sig')
+st.download_button(
+    label=f"📥 导出 {train_id} 作业台账 (CSV)",
+    data=csv,
+    file_name=f"Report_{train_id}_{datetime.now().strftime('%m%d')}.csv",
+    mime='text/csv'
+)
 
 # 下载功能
 csv = st.session_state.history_db.to_csv(index=False).encode('utf-8-sig')
