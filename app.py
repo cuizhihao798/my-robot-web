@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta  # 核心：必须加上这个 timedelta
 
 # ==========================================
 # 1. 页面配置与中南大学主题风格 (淡蓝色工业风)
