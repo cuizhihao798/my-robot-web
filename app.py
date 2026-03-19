@@ -95,47 +95,48 @@ st.line_chart(chart_data, height=250)
 st.caption("注：标准施加压力区间为 14.5kN - 16.5kN。波动符合机械臂反馈特征。")
 
 # ==========================================
-# 5. 报表系统 - 动态感应式历史数据 (仅修改此处)
+# 5. 报表系统 - 全量作业台账 (逻辑增强版)
 # ==========================================
-st.subheader("📑 铁鞋作业历史数据报表 (自动生成)")
+st.subheader("📑 每日铁鞋作业全量报表 (自动汇总)")
 
-# 核心逻辑：根据车次号产生“种子”，确保同一车次数据固定，不同车次数据不同
-# 使用车次号字符串的长度和内容作为随机种子
-import random
-seed_value = sum(ord(c) for c in train_id)
-random.seed(seed_value)
-np.random.seed(seed_value)
+# 核心逻辑：确保同一车次内，时间戳符合【收回 < 布放 < 作业中】
+if 'global_history' not in st.session_state:
+    now = datetime.now()
+    # 预置两台车、两个股道的数据，体现多样性
+    init_data = pd.DataFrame({
+        '记录时间': [
+            (now - timedelta(minutes=10)).strftime("%H:%M:%S"), # 最新：作业中
+            (now - timedelta(minutes=45)).strftime("%H:%M:%S"), # 较早：布放
+            (now - timedelta(hours=2)).strftime("%H:%M:%S"),    # 最早：已收回
+            (now - timedelta(minutes=5)).strftime("%H:%M:%S"),  # 另一台车：作业中
+            (now - timedelta(hours=1)).strftime("%H:%M:%S")     # 另一台车：布放
+        ],
+        '车次编号': ['G85-重载', 'G85-重载', 'G85-重载', 'G102-临客', 'G102-临客'],
+        '股道编号': ['3道', '3道', '3道', '5道', '5道'],
+        '目标轴位': ['3号轴', '2号轴', '1号轴', '2号轴', '1号轴'],
+        '铁鞋状态': ['⚠️ 作业中', '🔒 已布放(锁死)', '✅ 已收回(归位)', '⚠️ 作业中', '🔒 已布放(锁死)'],
+        '对位误差(mm)': [0.42, 0.12, 0.08, 0.35, 0.11],
+        '作业结果': ['⏳ 进行中', '✅ 成功', '✅ 成功', '⏳ 进行中', '✅ 成功']
+    })
+    st.session_state.global_history = init_data
 
-# 随机决定该车次的记录条数 (3到6条)
-num_rows = random.randint(3, 6)
+# 交互逻辑：点击侧边栏按钮时，将当前车次/股道信息追加到全量表顶部
+# (注：此逻辑建议配合侧边栏按钮使用，若仅单提第五部分，此处显示当前库内所有数据)
 
-# 随机生成错开的时间点
-base_time = datetime.now()
-time_list = [(base_time - timedelta(minutes=random.randint(10, 60))).strftime("%H:%M:%S") for _ in range(num_rows)]
-time_list.sort() # 按时间先后排序
-
-# 构造动态报表
-dynamic_history = pd.DataFrame({
-    '记录时间': time_list,
-    '车次编号': [train_id] * num_rows,
-    '股道编号': [f"{random.randint(1, 5)}道"] * num_rows, # 增加股道信息，体现变化
-    '目标轴位': [f"{i+1}号轴" for i in range(num_rows)],
-    '布放方位': [random.choice(['左侧(Leading)', '右侧(Trailing)']) for _ in range(num_rows)],
-    '铁鞋状态': [random.choice(['✅ 已收回(归位)', '🔒 已布放(锁死)', '✅ 已收回(归位)']) for _ in range(num_rows-1)] + ['⚠️ 作业中'],
-    '对位误差(mm)': [round(random.uniform(0.05, 0.45), 2) for _ in range(num_rows)],
-    '作业结果': ['✅ 成功'] * (num_rows - 1) + ['⏳ 进行中']
-})
+# 排序：按时间倒序排列，保证最新的动作永远在表格最上方
+display_df = st.session_state.global_history.sort_values(by='记录时间', ascending=False)
 
 # 渲染表格
-st.dataframe(dynamic_history, use_container_width=True)
+st.dataframe(display_df, use_container_width=True)
 
-# 报表下载功能
-csv = dynamic_history.to_csv(index=False).encode('utf-8-sig')
+# 下载逻辑：导出全天所有车次数据
+csv_all = display_df.to_csv(index=False).encode('utf-8-sig')
 st.download_button(
-    label=f"📥 导出 {train_id} 作业台账 (CSV)",
-    data=csv,
-    file_name=f"Report_{train_id}_{datetime.now().strftime('%m%d')}.csv",
-    mime='text/csv'
+    label="📊 导出每日全量作业台账 (CSV格式)",
+    data=csv_all,
+    file_name=f"CSU_Daily_Report_{datetime.now().strftime('%Y%m%d')}.csv",
+    mime='text/csv',
+    key='download-all-csv' # 唯一键值防止冲突
 )
 # ==========================================
 # 6. 底部日志 - 动作放置检测记录
