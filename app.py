@@ -41,39 +41,46 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 侧边栏：请严格按此顺序排列
+# 2. 侧边栏 (机器人状态遥测与逻辑监听)
 # ==========================================
 with st.sidebar:
-    st.markdown("### 🔋 机器人状态")
-    
-    # 【第一步：先定义变量】从滑动条获取电量数值
-    # 注意：这里的 85 是初始值
-    battery = st.slider("模拟电量调节", 0, 100, 85) 
-    
-    # 【第二步：再进行颜色逻辑判断】
-    if battery >= 80:
-        b_color = "#3B82F6"  # 蓝色
-        b_status = "⚡ 电量充足"
-    elif battery >= 40:
-        b_color = "#EAB308"  # 黄色
-        b_status = "⚠️ 电量中等"
-    else:
-        b_color = "#EF4444"  # 红色
-        b_status = "🚨 电量过低"
-
-    # 【第三步：显示 UI】
-    st.markdown(f"""
-        <div style="padding:10px; border-radius:5px; background-color:{b_color}22; border:1px solid {b_color};">
-            <strong style="color:{b_color};">{b_status}</strong><br>
-            <span style="font-size:20px; font-weight:bold; color:{b_color};">{battery}%</span>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    st.progress(battery / 100)
+    st.markdown('<p class="csu-header">CENTRAL SOUTH UNIVERSITY</p>', unsafe_allow_html=True)
+    st.header("🤖 机器人状态遥测")
     st.markdown("---")
     
-    # 其他输入项（如车次号）跟在后面...
+    # --- 【第一步：定义电量变量】 ---
+    # 先创建滑动条，获取 battery 的数值
+    battery = st.slider("模拟电量调节", 0, 100, 85)
+    
+    # --- 【第二步：根据数值判断颜色逻辑】 ---
+    if battery >= 80:
+        b_color = "#3B82F6"  # 蓝色 (正常/充足)
+        b_status = "⚡ 电量充足"
+    elif battery >= 40:
+        b_color = "#EAB308"  # 黄色 (中等)
+        b_status = "⚠️ 电量中等"
+    else:
+        b_color = "#EF4444"  # 红色 (警示)
+        b_status = "🚨 电量过低"
+
+    # --- 【第三步：显示电量卡片 UI】 ---
+    st.markdown(f"""
+        <div style="padding:15px; border-radius:10px; background-color:{b_color}22; border:1px solid {b_color}; text-align:center;">
+            <strong style="color:{b_color}; font-size:14px;">{b_status}</strong><br>
+            <span style="font-size:28px; font-weight:bold; color:{b_color};">{battery}%</span>
+        </div>
+    """, unsafe_allow_html=True)
+    st.progress(battery / 100)
+    
+    st.markdown("---")
+    
+    # --- 【第四步：车次与股道输入】 ---
+    # 这里的 train_id 将直接触发第五部分的报表更新逻辑
     train_id = st.text_input("当前作业车次", value="G85-重载")
+    track_id = st.selectbox("作业股道", ["1道", "2道", "3道", "4道", "5道"], index=2)
+    
+    st.markdown("---")
+    st.caption("提示：修改车次号并回车，系统将自动判定为新任务进入，并更新历史报表。")
 # ==========================================
 # 3. 主界面顶部 - 状态汇总
 # ==========================================
