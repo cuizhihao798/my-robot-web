@@ -1,136 +1,138 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+import time
+from datetime import datetime
 
 # ==========================================
-# 1. 页面全局配置 (必须放在第一行)
+# 1. 页面配置与中南大学主题风格 (淡蓝色工业风)
 # ==========================================
-st.set_page_config(
-    page_title="防溜机器人智能调度大屏",
-    page_icon="🚄",
-    layout="wide"
-)
+st.set_page_config(page_title="中南大学-轨道机器人监控", layout="wide")
 
-# ==========================================
-# 2. 侧边栏：模拟数据接收与参数调节
-# ==========================================
-st.sidebar.header("📡 机器人状态遥测")
-st.sidebar.caption("模拟传感器传回的实时数据")
-
-robot_status = st.sidebar.selectbox(
-    "小车当前运行状态",
-    ["🟢 作业中 (对位布放)", "🟡 待机寻迹中", "🔵 充电中", "🔴 视觉异常告警"]
-)
-battery = st.sidebar.slider("剩余电量 (%)", 0, 100, 82)
-current_train = st.sidebar.text_input("当前作业车次", "G8021-重载编组")
-refresh_btn = st.sidebar.button("手动刷新实时数据")
-
-# ==========================================
-# 3. 主界面 Header
-# ==========================================
-st.title("🚄 列车自动防溜作业数字监控大屏")
-st.markdown("基于视觉定位的列车铁鞋智能调度防溜车系统")
-st.divider()
-
-# ==========================================
-# 4. 核心模块一：实时运行状态概览
-# ==========================================
-st.header("📊 全局状态概览")
-col1, col2, col3, col4 = st.columns(4)
-
-col1.metric("设备网络状态", robot_status.split(" ")[1], "在线" if "异常" not in robot_status else "-掉线")
-col2.metric("当前电量", f"{battery}%", "-2% (放电正常)" if battery > 20 else "-低电量警告")
-col3.metric("今日完成防溜总数", "24 组 (48个铁鞋)", "+2 组 (上一小时)")
-col4.metric("视觉平均对位精度", "0.18 mm", "+0.02 mm (毫米级)")
-
-st.divider()
-
-# ==========================================
-# 5. 核心模块二：非对称布放状态 3D 逻辑监控
-# ==========================================
-st.header("🛞 当前转向架防溜作业监控 (实时映射)")
-st.markdown(f"**目标车次：** `{current_train}` | **当前执行规程：** `双轴四点·非对称对角布放`")
-
-# 使用列布局模拟前后两个车轴的铁鞋放置情况
-axle1_col, axle2_col = st.columns(2)
-
-# 模拟 1 号轴 (要求放在左侧 Leading Edge)
-with axle1_col:
-    st.subheader("📍 第 1 轴 (前轴)")
-    st.info("执行逻辑：锁定轮轨左侧切点 (Leading Edge)")
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.success("✅ 左侧铁鞋：已布放\n\n置信度: 99.2%")
-    with c2:
-        st.write("⚪ 右侧铁鞋：非作业侧\n\n(规程屏蔽)")
-
-# 模拟 2 号轴 (要求放在右侧 Trailing Edge)
-with axle2_col:
-    st.subheader("📍 第 2轴 (后轴)")
-    st.warning("执行逻辑：锁定轮轨右侧切点 (Trailing Edge)")
-
-    c3, c4 = st.columns(2)
-    with c3:
-        st.write("⚪ 左侧铁鞋：非作业侧\n\n(规程屏蔽)")
-    with c4:
-        st.success("✅ 右侧铁鞋：已布放\n\n置信度: 98.8%")
-
-st.divider()
-
-# ==========================================
-# 6. 核心模块三：作业日志与数据收集报表
-# ==========================================
-st.header("📝 铁鞋布放历史数据报表")
-
-
-# 生成模拟的历史作业数据
-@st.cache_data
-def load_mock_data():
-    base_time = datetime.now()
-    data = []
-    for i in range(10):
-        # 模拟一前一后的逻辑数据
-        is_axle_1 = (i % 2 == 0)
-        axle = "1号轴" if is_axle_1 else "2号轴"
-        position = "左侧 (Leading)" if is_axle_1 else "右侧 (Trailing)"
-
-        data.append({
-            "记录时间": (base_time - timedelta(minutes=i * 15)).strftime("%Y-%m-%d %H:%M:%S"),
-            "车次编号": "G8021",
-            "股道编号": "3道",
-            "目标轴位": axle,
-            "布放方位": position,
-            "视觉计算耗时(s)": round(np.random.uniform(1.2, 2.5), 2),
-            "极点贴合误差(mm)": round(np.random.uniform(0.05, 0.45), 2),
-            "作业结果": "✅ 成功"
-        })
-    return pd.DataFrame(data)
-
-
-df = load_mock_data()
-
-# 在网页上展示可交互的表格，加入进度条样式展示极小的误差
-st.dataframe(
-    df,
-    use_container_width=True,
-    column_config={
-        "极点贴合误差(mm)": st.column_config.ProgressColumn(
-            "极点贴合误差(mm)",
-            help="毫米级边缘检测误差",
-            format="%.2f mm",
-            min_value=0.0,
-            max_value=0.5,  # 假设0.5mm是最大容忍误差
-        ),
+# 自定义 CSS 样式
+st.markdown("""
+    <style>
+    /* 整体背景与文字 */
+    .stApp { background-color: #F0F5F9; }
+    h1, h2, h3 { color: #1E3A8A; font-family: "Microsoft YaHei"; }
+    
+    /* 侧边栏样式 */
+    [data-testid="stSidebar"] { background-color: #E2E8F0; border-right: 2px solid #CBD5E1; }
+    
+    /* 卡片式容器 */
+    .metric-container {
+        background-color: #FFFFFF;
+        border-radius: 10px;
+        padding: 15px;
+        border-left: 5px solid #3B82F6;
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
     }
-)
+    
+    /* 中南大学元素标识 */
+    .csu-header {
+        font-size: 14px;
+        color: #64748B;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# 提供 CSV 导出功能
-csv = df.to_csv(index=False).encode('utf-8-sig')
+# ==========================================
+# 2. 侧边栏 (机器人状态遥测)
+# ==========================================
+with st.sidebar:
+    st.markdown('<p class="csu-header">CENTRAL SOUTH UNIVERSITY</p>', unsafe_allow_html=True)
+    st.header("📝 机器人状态遥测")
+    st.markdown("---")
+    
+    # 作业模式选择
+    op_mode = st.selectbox("当前作业模式", ["全自动布放", "远程手动接管", "应急撤回", "系统维护"])
+    
+    # 模拟电量滑动条
+    battery = st.slider("剩余电量 (%)", 0, 100, 82)
+    st.progress(battery / 100)
+    
+    # 车辆信息输入
+    train_id = st.text_input("当前作业车次", "G8021-重载编组")
+    
+    if st.button("手动刷新实时数据"):
+        st.toast("正在同步机器人传感器数据...")
+        time.sleep(0.5)
+
+# ==========================================
+# 3. 主界面顶部 - 状态汇总
+# ==========================================
+st.title("🚄 轨道机器人铁鞋布放监控系统")
+st.markdown(f"**单位：中南大学控制工程实验室** | 当前模式：`{op_mode}` | 执行车次：`{train_id}`")
+
+# 四个状态卡片
+col_a, col_b, col_c, col_d = st.columns(4)
+with col_a:
+    st.info("🤖 **机器人状态**\n\n 作业中 (对位布放)")
+with col_b:
+    st.success("🛰️ **定位精度**\n\n 0.12mm (厘米级)")
+with col_c:
+    st.warning("⚖️ **左侧铁鞋**\n\n 状态: 已布放 (99.2%)")
+with col_d:
+    st.warning("⚖️ **右侧铁鞋**\n\n 状态: 已布放 (98.8%)")
+
+st.markdown("---")
+
+# ==========================================
+# 4. 核心功能 - 铁鞋压力检测折线图
+# ==========================================
+st.subheader("📊 铁鞋放置压力传感实时折线图 (kN)")
+
+# 模拟压力数据：左侧和右侧
+chart_data = pd.DataFrame(
+    np.random.randn(20, 2) * 0.5 + 15, # 围绕15kN波动
+    columns=['左铁鞋压力', '右铁鞋压力']
+)
+st.line_chart(chart_data, height=250)
+st.caption("注：标准施加压力区间为 14.5kN - 16.5kN。波动符合机械臂反馈特征。")
+
+# ==========================================
+# 5. 报表系统 - 铁鞋布放历史数据
+# ==========================================
+st.subheader("📑 铁鞋布放历史数据报表")
+
+# 构建模拟报表数据
+history_data = pd.DataFrame({
+    '记录时间': [datetime.now().strftime("%Y-%m-%d %H:%M:%S") for i in range(8)],
+    '车次编号': ['G8021'] * 8,
+    '目标轴位': ['1号轴', '2号轴', '1号轴', '2号轴', '3号轴', '4号轴', '1号轴', '2号轴'],
+    '布放方位': ['左侧(Leading)', '右侧(Trailing)'] * 4,
+    '视觉计算耗时(s)': [1.87, 1.59, 1.30, 1.69, 1.83, 1.77, 1.54, 1.27],
+    '贴合误差(mm)': [0.36, 0.06, 0.13, 0.11, 0.24, 0.10, 0.12, 0.15],
+    '作业结果': ['✅ 成功'] * 8
+})
+
+# 显示交互式表格
+st.dataframe(history_data, use_container_width=True)
+
+# 自动生成报表下载按钮
+csv = history_data.to_csv(index=False).encode('utf-8-sig')
 st.download_button(
     label="📥 导出完整作业台账 (CSV格式)",
     data=csv,
-    file_name=f'防溜作业台账_{datetime.now().strftime("%Y%m%d")}.csv',
+    file_name=f'CSU_Robot_Report_{datetime.now().strftime("%Y%m%d")}.csv',
     mime='text/csv',
 )
+
+# ==========================================
+# 6. 底部日志 - 动作放置检测记录
+# ==========================================
+with st.expander("🔍 查看实时动作检测日志", expanded=True):
+    st.code(f"""
+    [{datetime.now().strftime("%H:%M:%S")}] [INFO] 视觉对位完成，偏移量 0.02mm
+    [{datetime.now().strftime("%H:%M:%S")}] [ACTION] 机械臂开始执行 1号轴 铁鞋布放...
+    [{datetime.now().strftime("%H:%M:%S")}] [SENSOR] 探测到接触压力，当前读数: 15.42kN
+    [{datetime.now().strftime("%H:%M:%S")}] [SUCCESS] 铁鞋放置完毕，液压锁死已激活
+    [{datetime.now().strftime("%H:%M:%S")}] [SYSTEM] 自动生成本条作业报表记录
+    """)
+
+# 页脚
+st.markdown("---")
+st.markdown('<center style="color: #94A3B8;">中南大学控制工程实验室 | 轨道机器人数字化监测平台 v2.5</center>', unsafe_allow_html=True)
