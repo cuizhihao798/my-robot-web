@@ -41,43 +41,39 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. 侧边栏 (机器人状态遥测)
-# ==========================================
-with st.sidebar:
-    st.markdown('<p class="csu-header">CENTRAL SOUTH UNIVERSITY</p>', unsafe_allow_html=True)
-    st.header("📝 机器人状态遥测")
-    st.markdown("---")
-    
-    # 作业模式选择
-    op_mode = st.selectbox("当前作业模式", ["全自动布放", "远程手动接管", "应急撤回", "系统维护"])
-    # ==========================================
-# 侧边栏：电量动态颜色显示 (只修改此部分)
+# 侧边栏：请严格按此顺序排列
 # ==========================================
 with st.sidebar:
     st.markdown("### 🔋 机器人状态")
     
-    # 1. 定义电量颜色逻辑
+    # 【第一步：先定义变量】从滑动条获取电量数值
+    # 注意：这里的 85 是初始值
+    battery = st.slider("模拟电量调节", 0, 100, 85) 
+    
+    # 【第二步：再进行颜色逻辑判断】
     if battery >= 80:
-        b_color = "#3B82F6"  # 蓝色 (正常/充足)
+        b_color = "#3B82F6"  # 蓝色
         b_status = "⚡ 电量充足"
     elif battery >= 40:
-        b_color = "#EAB308"  # 黄色 (中等)
+        b_color = "#EAB308"  # 黄色
         b_status = "⚠️ 电量中等"
     else:
-        b_color = "#EF4444"  # 红色 (警示)
+        b_color = "#EF4444"  # 红色
         b_status = "🚨 电量过低"
 
-   
-    battery = st.slider("模拟电量调节", 0, 100, battery)
+    # 【第三步：显示 UI】
+    st.markdown(f"""
+        <div style="padding:10px; border-radius:5px; background-color:{b_color}22; border:1px solid {b_color};">
+            <strong style="color:{b_color};">{b_status}</strong><br>
+            <span style="font-size:20px; font-weight:bold; color:{b_color};">{battery}%</span>
+        </div>
+    """, unsafe_allow_html=True)
+    
     st.progress(battery / 100)
+    st.markdown("---")
     
-    # 车辆信息输入
-    train_id = st.text_input("当前作业车次", "G8021-重载编组")
-    
-    if st.button("手动刷新实时数据"):
-        st.toast("正在同步机器人传感器数据...")
-        time.sleep(0.5)
-
+    # 其他输入项（如车次号）跟在后面...
+    train_id = st.text_input("当前作业车次", value="G85-重载")
 # ==========================================
 # 3. 主界面顶部 - 状态汇总
 # ==========================================
