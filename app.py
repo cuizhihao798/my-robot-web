@@ -95,21 +95,21 @@ st.line_chart(chart_data, height=250)
 st.caption("注：标准施加压力区间为 14.5kN - 16.5kN。波动符合机械臂反馈特征。")
 
 # ==========================================
-# 5. 报表系统 - 全量作业台账 (逻辑增强版)
+# 5. 报表系统 - 全量作业台账 (车次聚合版)
 # ==========================================
-st.subheader("📑 每日铁鞋作业全量报表 (自动汇总)")
+st.subheader("📑 每日铁鞋作业全量报表 (按车次聚合)")
 
 # 核心逻辑：确保同一车次内，时间戳符合【收回 < 布放 < 作业中】
 if 'global_history' not in st.session_state:
     now = datetime.now()
-    # 预置两台车、两个股道的数据，体现多样性
+    # 预置演示数据：包含 G85 和 G102 两台车
     init_data = pd.DataFrame({
         '记录时间': [
-            (now - timedelta(minutes=10)).strftime("%H:%M:%S"), # 最新：作业中
-            (now - timedelta(minutes=45)).strftime("%H:%M:%S"), # 较早：布放
-            (now - timedelta(hours=2)).strftime("%H:%M:%S"),    # 最早：已收回
-            (now - timedelta(minutes=5)).strftime("%H:%M:%S"),  # 另一台车：作业中
-            (now - timedelta(hours=1)).strftime("%H:%M:%S")     # 另一台车：布放
+            (now - timedelta(minutes=10)).strftime("%H:%M:%S"), # G85-最新
+            (now - timedelta(minutes=45)).strftime("%H:%M:%S"), # G85-较早
+            (now - timedelta(hours=2)).strftime("%H:%M:%S"),    # G85-最早
+            (now - timedelta(minutes=5)).strftime("%H:%M:%S"),  # G102-最新
+            (now - timedelta(hours=1)).strftime("%H:%M:%S")     # G102-较早
         ],
         '车次编号': ['G85-重载', 'G85-重载', 'G85-重载', 'G102-临客', 'G102-临客'],
         '股道编号': ['3道', '3道', '3道', '5道', '5道'],
@@ -120,11 +120,13 @@ if 'global_history' not in st.session_state:
     })
     st.session_state.global_history = init_data
 
-# 交互逻辑：点击侧边栏按钮时，将当前车次/股道信息追加到全量表顶部
-# (注：此逻辑建议配合侧边栏按钮使用，若仅单提第五部分，此处显示当前库内所有数据)
-
-# 排序：按时间倒序排列，保证最新的动作永远在表格最上方
-display_df = st.session_state.global_history.sort_values(by='记录时间', ascending=False)
+# --- 【核心修改：双重排序逻辑】 ---
+# 1. 先按“车次编号”排序，让相同车次挨在一起
+# 2. 在相同车次内部，按“记录时间”倒序，让最新的动作排在最前面
+display_df = st.session_state.global_history.sort_values(
+    by=['车次编号', '记录时间'], 
+    ascending=[True, False]
+)
 
 # 渲染表格
 st.dataframe(display_df, use_container_width=True)
@@ -136,7 +138,7 @@ st.download_button(
     data=csv_all,
     file_name=f"CSU_Daily_Report_{datetime.now().strftime('%Y%m%d')}.csv",
     mime='text/csv',
-    key='download-all-csv' # 唯一键值防止冲突
+    key='download-all-csv'
 )
 # ==========================================
 # 6. 底部日志 - 动作放置检测记录
