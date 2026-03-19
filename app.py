@@ -7,7 +7,7 @@ from datetime import datetime
 # ==========================================
 # 1. 页面配置与中南大学主题风格 (淡蓝色工业风)
 # ==========================================
-st.set_page_config(page_title="中南大学-轨道机器人监控", layout="wide")
+st.set_page_config(page_title="中南大学-轨道防溜小车监控", layout="wide")
 
 # 自定义 CSS 样式
 st.markdown("""
@@ -65,7 +65,7 @@ with st.sidebar:
 # 3. 主界面顶部 - 状态汇总
 # ==========================================
 st.title("🚄 轨道机器人铁鞋布放监控系统")
-st.markdown(f"**单位：中南大学控制工程实验室** | 当前模式：`{op_mode}` | 执行车次：`{train_id}`")
+st.markdown(f"**单位：中南大学交通运输工程学院** | 当前模式：`{op_mode}` | 执行车次：`{train_id}`")
 
 # 四个状态卡片
 col_a, col_b, col_c, col_d = st.columns(4)
@@ -135,4 +135,4 @@ with st.expander("🔍 查看实时动作检测日志", expanded=True):
 
 # 页脚
 st.markdown("---")
-st.markdown('<center style="color: #94A3B8;">中南大学控制工程实验室 | 轨道机器人数字化监测平台 v2.5</center>', unsafe_allow_html=True)
+st.markdown('<center style="color: #94A3B8;">中南大学交通运输工程学院| 轨道防溜小车数字化监测平台 v2.5</center>', unsafe_allow_html=True)
