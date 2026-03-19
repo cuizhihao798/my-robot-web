@@ -126,18 +126,6 @@ else:
 # 显示筛选后的表格
 st.dataframe(filtered_data, use_container_width=True)
 
-# 显示交互式表格
-st.dataframe(history_data, use_container_width=True)
-
-# 自动生成报表下载按钮
-csv = history_data.to_csv(index=False).encode('utf-8-sig')
-st.download_button(
-    label=" 导出完整作业台账 (CSV格式)",
-    data=csv,
-    file_name=f'CSU_Robot_Report_{datetime.now().strftime("%Y%m%d")}.csv',
-    mime='text/csv',
-)
-
 # ==========================================
 # 6. 底部日志 - 动作放置检测记录
 # ==========================================
