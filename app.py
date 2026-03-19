@@ -95,50 +95,73 @@ st.line_chart(chart_data, height=250)
 st.caption("注：标准施加压力区间为 14.5kN - 16.5kN。波动符合机械臂反馈特征。")
 
 # ==========================================
-# 5. 报表系统 - 全量作业台账 (车次聚合版)
+# 5. 报表系统 - 全自动感应与全量汇总版
 # ==========================================
-st.subheader("📑 每日铁鞋作业全量报表 (按车次聚合)")
+st.subheader("📑 每日铁鞋作业全量报表 (自动感应更新)")
 
-# 核心逻辑：确保同一车次内，时间戳符合【收回 < 布放 < 作业中】
-if 'global_history' not in st.session_state:
+# --- A. 初始化全局总库 (Session State) ---
+if 'global_db' not in st.session_state:
+    # 预置一些初始演示数据，体现多车次和不同时间逻辑
     now = datetime.now()
-    # 预置演示数据：包含 G85 和 G102 两台车
-    init_data = pd.DataFrame({
+    st.session_state.global_db = pd.DataFrame({
         '记录时间': [
-            (now - timedelta(minutes=10)).strftime("%H:%M:%S"), # G85-最新
-            (now - timedelta(minutes=45)).strftime("%H:%M:%S"), # G85-较早
-            (now - timedelta(hours=2)).strftime("%H:%M:%S"),    # G85-最早
-            (now - timedelta(minutes=5)).strftime("%H:%M:%S"),  # G102-最新
-            (now - timedelta(hours=1)).strftime("%H:%M:%S")     # G102-较早
+            (now - timedelta(hours=2)).strftime("%H:%M:%S"), # 最早
+            (now - timedelta(hours=1, minutes=30)).strftime("%H:%M:%S"),
+            (now - timedelta(minutes=40)).strftime("%H:%M:%S") # 最新
         ],
-        '车次编号': ['G85-重载', 'G85-重载', 'G85-重载', 'G102-临客', 'G102-临客'],
-        '股道编号': ['3道', '3道', '3道', '5道', '5道'],
-        '目标轴位': ['3号轴', '2号轴', '1号轴', '2号轴', '1号轴'],
-        '铁鞋状态': ['⚠️ 作业中', '🔒 已布放(锁死)', '✅ 已收回(归位)', '⚠️ 作业中', '🔒 已布放(锁死)'],
-        '对位误差(mm)': [0.42, 0.12, 0.08, 0.35, 0.11],
-        '作业结果': ['⏳ 进行中', '✅ 成功', '✅ 成功', '⏳ 进行中', '✅ 成功']
+        '车次编号': ['G102-临客', 'G102-临客', 'G102-临客'],
+        '股道编号': ['5道', '5道', '5道'],
+        '目标轴位': ['1号轴', '2号轴', '3号轴'],
+        '铁鞋状态': ['✅ 已收回(归位)', '🔒 已布放(锁死)', '⚠️ 作业中'],
+        '对位误差(mm)': [0.15, 0.11, 0.32],
+        '作业结果': ['✅ 成功', '✅ 成功', '⏳ 进行中']
     })
-    st.session_state.global_history = init_data
+    # 记录当前正在操作的车次，用于比对是否切换了新车
+    st.session_state.active_train = ""
 
-# --- 【核心修改：双重排序逻辑】 ---
-# 1. 先按“车次编号”排序，让相同车次挨在一起
-# 2. 在相同车次内部，按“记录时间”倒序，让最新的动作排在最前面
-display_df = st.session_state.global_history.sort_values(
+# --- B. 核心逻辑：检测车次号是否发生手动更改 ---
+# 只有当你在侧边栏输入了新内容，且不等于上次记录的车次时，才触发自动生成
+if train_id and train_id != st.session_state.active_train:
+    # 模拟新车进入，自动生成该车次的一组逻辑严密的数据
+    ref_time = datetime.now()
+    new_records = pd.DataFrame({
+        '记录时间': [
+            (ref_time - timedelta(minutes=25)).strftime("%H:%M:%S"), # 时间最久
+            (ref_time - timedelta(minutes=15)).strftime("%H:%M:%S"), # 中间
+            (ref_time - timedelta(seconds=5)).strftime("%H:%M:%S")   # 最晚/最新
+        ],
+        '车次编号': [train_id] * 3,
+        '股道编号': [f"{random.randint(1,4)}道"] * 3,
+        '目标轴位': ['1号轴', '2号轴', '3号轴'],
+        '铁鞋状态': ['✅ 已收回(归位)', '🔒 已布放(锁死)', '⚠️ 作业中'],
+        '对位误差(mm)': [0.09, 0.14, 0.28],
+        '作业结果': ['✅ 成功', '✅ 成功', '⏳ 进行中']
+    })
+    
+    # 将新生成的车次数据追加到总库中
+    st.session_state.global_db = pd.concat([new_records, st.session_state.global_db], ignore_index=True)
+    # 更新当前激活的车次名，防止重复生成
+    st.session_state.active_train = train_id
+    st.toast(f"检测到新车次 {train_id} 进入，已自动更新作业台账")
+
+# --- C. 数据展示排序：相同车次排一起，组内时间倒序 ---
+# 这样能保证 G85 的所有数据在一起，且最新的作业在最上面
+display_df = st.session_state.global_db.sort_values(
     by=['车次编号', '记录时间'], 
     ascending=[True, False]
 )
 
-# 渲染表格
+# 渲染全量表格
 st.dataframe(display_df, use_container_width=True)
 
-# 下载逻辑：导出全天所有车次数据
+# --- D. 全量导出功能 ---
 csv_all = display_df.to_csv(index=False).encode('utf-8-sig')
 st.download_button(
     label="📊 导出每日全量作业台账 (CSV格式)",
     data=csv_all,
     file_name=f"CSU_Daily_Report_{datetime.now().strftime('%Y%m%d')}.csv",
     mime='text/csv',
-    key='download-all-csv'
+    key='main_download_btn'
 )
 # ==========================================
 # 6. 底部日志 - 动作放置检测记录
