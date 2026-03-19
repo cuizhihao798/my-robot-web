@@ -41,29 +41,27 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. 侧边栏 (机器人状态遥测与逻辑监听)
+# 2. 侧边栏 (变量初始化与状态遥测)
 # ==========================================
 with st.sidebar:
     st.markdown('<p class="csu-header">CENTRAL SOUTH UNIVERSITY</p>', unsafe_allow_html=True)
     st.header("🤖 机器人状态遥测")
     st.markdown("---")
     
-    # --- 【第一步：定义电量变量】 ---
-    # 先创建滑动条，获取 battery 的数值
+    # --- A. 电量逻辑 (必须先定义变量再进行逻辑判断) ---
     battery = st.slider("模拟电量调节", 0, 100, 85)
     
-    # --- 【第二步：根据数值判断颜色逻辑】 ---
     if battery >= 80:
-        b_color = "#3B82F6"  # 蓝色 (正常/充足)
+        b_color = "#3B82F6"  # 蓝色
         b_status = "⚡ 电量充足"
     elif battery >= 40:
-        b_color = "#EAB308"  # 黄色 (中等)
+        b_color = "#EAB308"  # 黄色
         b_status = "⚠️ 电量中等"
     else:
-        b_color = "#EF4444"  # 红色 (警示)
+        b_color = "#EF4444"  # 红色
         b_status = "🚨 电量过低"
 
-    # --- 【第三步：显示电量卡片 UI】 ---
+    # 显示带颜色的电量卡片
     st.markdown(f"""
         <div style="padding:15px; border-radius:10px; background-color:{b_color}22; border:1px solid {b_color}; text-align:center;">
             <strong style="color:{b_color}; font-size:14px;">{b_status}</strong><br>
@@ -74,13 +72,14 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # --- 【第四步：车次与股道输入】 ---
-    # 这里的 train_id 将直接触发第五部分的报表更新逻辑
+    # --- B. 作业参数定义 (解决 NameError 的关键) ---
+    # 必须在这里定义 op_mode, train_id, track_id，主界面才能引用
+    op_mode = st.selectbox("当前作业模式", ["全自动布放", "手动微调", "安全锁定", "应急撤回"])
     train_id = st.text_input("当前作业车次", value="G85-重载")
     track_id = st.selectbox("作业股道", ["1道", "2道", "3道", "4道", "5道"], index=2)
     
     st.markdown("---")
-    st.caption("提示：修改车次号并回车，系统将自动判定为新任务进入，并更新历史报表。")
+    st.info("💡 提示：修改车次号并回车，下方报表将自动感应并生成新任务记录。")
 # ==========================================
 # 3. 主界面顶部 - 状态汇总
 # ==========================================
