@@ -45,7 +45,7 @@ st.markdown("""
 # ==========================================
 with st.sidebar:
     st.markdown('<p class="csu-header">CENTRAL SOUTH UNIVERSITY</p>', unsafe_allow_html=True)
-    st.header("🤖 机器人状态遥测")
+    st.header(" 机器人状态遥测")
     st.markdown("---")
     
     # --- A. 电量逻辑 (必须先定义变量再进行逻辑判断) ---
@@ -83,8 +83,8 @@ with st.sidebar:
 # ==========================================
 # 3. 主界面顶部 - 状态汇总
 # ==========================================
-st.title("🚄 轨道机器人铁鞋布放监控系统")
-st.markdown(f"**单位：中南大学控制工程实验室** | 当前模式：`{op_mode}` | 执行车次：`{train_id}`")
+st.title("轨道机器人铁鞋布放监控系统")
+st.markdown(f"**单位：中南大学交通运输工程学院** | 当前模式：`{op_mode}` | 执行车次：`{train_id}`")
 
 # 四个状态卡片
 col_a, col_b, col_c, col_d = st.columns(4)
@@ -175,7 +175,7 @@ st.dataframe(display_df, use_container_width=True)
 # --- D. 全量导出功能 ---
 csv_all = display_df.to_csv(index=False).encode('utf-8-sig')
 st.download_button(
-    label="📊 导出每日全量作业台账 (CSV格式)",
+    label=" 导出每日全量作业台账 (CSV格式)",
     data=csv_all,
     file_name=f"CSU_Daily_Report_{datetime.now().strftime('%Y%m%d')}.csv",
     mime='text/csv',
@@ -184,7 +184,7 @@ st.download_button(
 # ==========================================
 # 6. 底部日志 - 动作放置检测记录
 # ==========================================
-with st.expander("🔍 查看实时动作检测日志", expanded=True):
+with st.expander(" 查看实时动作检测日志", expanded=True):
     st.code(f"""
     [{datetime.now().strftime("%H:%M:%S")}] [INFO] 视觉对位完成，偏移量 0.02mm
     [{datetime.now().strftime("%H:%M:%S")}] [ACTION] 机械臂开始执行 1号轴 铁鞋布放...
