@@ -50,9 +50,33 @@ with st.sidebar:
     
     # 作业模式选择
     op_mode = st.selectbox("当前作业模式", ["全自动布放", "远程手动接管", "应急撤回", "系统维护"])
+    # ==========================================
+# 侧边栏：电量动态颜色显示 (只修改此部分)
+# ==========================================
+with st.sidebar:
+    st.markdown("### 🔋 机器人状态")
     
-    # 模拟电量滑动条
-    battery = st.slider("剩余电量 (%)", 0, 100, 82)
+    # 1. 定义电量颜色逻辑
+    if battery >= 80:
+        b_color = "#3B82F6"  # 蓝色 (正常/充足)
+        b_status = "⚡ 电量充足"
+    elif battery >= 40:
+        b_color = "#EAB308"  # 黄色 (中等)
+        b_status = "⚠️ 电量中等"
+    else:
+        b_color = "#EF4444"  # 红色 (警示)
+        b_status = "🚨 电量过低"
+
+    # 2. 使用 HTML 渲染带颜色的文本
+    st.markdown(f"""
+        <div style="padding:10px; border-radius:5px; background-color:{b_color}22; border:1px solid {b_color};">
+            <strong style="color:{b_color};">{b_status}</strong><br>
+            <span style="font-size:20px; font-weight:bold; color:{b_color};">{battery}%</span>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # 保持原有的滑动条，方便演示切换
+    battery = st.slider("模拟电量调节", 0, 100, battery)
     st.progress(battery / 100)
     
     # 车辆信息输入
