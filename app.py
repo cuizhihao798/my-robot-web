@@ -94,20 +94,37 @@ st.line_chart(chart_data, height=250)
 st.caption("注：标准施加压力区间为 14.5kN - 16.5kN。波动符合机械臂反馈特征。")
 
 # ==========================================
-# 5. 报表系统 - 铁鞋布放历史数据
+# 5. 报表系统 - 铁鞋布放历史数据 (修复动态关联逻辑)
 # ==========================================
-st.subheader(" 铁鞋布放历史数据报表")
+st.subheader("📑 铁鞋布放历史数据报表")
 
-# 构建模拟报表数据
-history_data = pd.DataFrame({
-    '记录时间': [datetime.now().strftime("%Y-%m-%d %H:%M:%S") for i in range(8)],
-    '车次编号': ['G8021'] * 8,
-    '目标轴位': ['1号轴', '2号轴', '1号轴', '2号轴', '3号轴', '4号轴', '1号轴', '2号轴'],
-    '布放方位': ['左侧(Leading)', '右侧(Trailing)'] * 4,
-    '视觉计算耗时(s)': [1.87, 1.59, 1.30, 1.69, 1.83, 1.77, 1.54, 1.27],
-    '贴合误差(mm)': [0.36, 0.06, 0.13, 0.11, 0.24, 0.10, 0.12, 0.15],
-    '作业结果': ['✅ 成功'] * 8
+# 模拟一个较大的原始数据库
+raw_data = pd.DataFrame({
+    '记录时间': [datetime.now().strftime("%Y-%m-%d %H:%M:%S") for _ in range(20)],
+    '车次编号': ['G8021-重载编组']*10 + ['G9999-临客']*10, # 模拟两个不同的车次
+    '目标轴位': ['1号轴', '2号轴'] * 10,
+    '布放方位': ['左侧(Leading)', '右侧(Trailing)'] * 10,
+    '贴合误差(mm)': np.random.uniform(0.05, 0.45, 20).round(2),
+    '作业结果': ['✅ 成功'] * 20
 })
+
+# 【关键改动】：根据侧边栏输入的 train_id 进行筛选
+# 如果输入框里的车次在数据库里能找到，就只显示该车次的数据
+if train_id in raw_data['车次编号'].values:
+    filtered_data = raw_data[raw_data['车次编号'] == train_id]
+else:
+    # 如果是新输入的未知车次，动态生成一组该车次的新数据（模拟新作业）
+    filtered_data = pd.DataFrame({
+        '记录时间': [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+        '车次编号': [train_id],
+        '目标轴位': ['临时轴'],
+        '布放方位': ['自动对位'],
+        '贴合误差(mm)': [0.00],
+        '作业结果': ['⏳ 等待作业']
+    })
+
+# 显示筛选后的表格
+st.dataframe(filtered_data, use_container_width=True)
 
 # 显示交互式表格
 st.dataframe(history_data, use_container_width=True)
