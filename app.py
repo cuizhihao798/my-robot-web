@@ -76,7 +76,7 @@ with st.sidebar:
     # 必须在这里定义 op_mode, train_id, track_id，主界面才能引用
     op_mode = st.selectbox("当前作业模式", ["全自动布放", "手动微调", "安全锁定", "应急撤回"])
     train_id = st.text_input("当前作业车次", value="G85-重载")
-    track_id = st.selectbox("作业股道", ["1道", "2道", "3道", "4道", "5道"], index=2)
+    
     
     st.markdown("---")
     st.info("💡 提示：修改车次号并回车，下方报表将自动感应并生成新任务记录。")
