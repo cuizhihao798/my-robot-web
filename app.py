@@ -93,43 +93,97 @@ chart_data = pd.DataFrame(
 st.line_chart(chart_data, height=250)
 st.caption("注：标准施加压力区间为 14.5kN - 16.5kN。波动符合机械臂反馈特征。")
 
-# ==========================================
-# 5. 报表系统 - 带有持久化记忆的记录表
-# ==========================================
-st.subheader("📑 铁鞋布放历史数据报表 (实时保存)")
+import streamlit as st
+import pandas as pd
+import numpy as np
+import time
+from datetime import datetime, timedelta
 
-# --- 【核心修改：初始化缓存数据库】 ---
+# 1. 页面配置
+st.set_page_config(page_title="中南大学-自动化防溜系统", layout="wide")
+
+# 2. 模拟数据库持久化 (使用 Session State)
+# 初始化：如果没数据，或者车次变了，就重新生成
+if 'current_train' not in st.session_state:
+    st.session_state.current_train = ""
 if 'history_db' not in st.session_state:
-    # 初始默认数据
-    st.session_state.history_db = pd.DataFrame({
-        '记录时间': [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-        '车次编号': ['G8021-初始示例'],
-        '目标轴位': ['1号轴'],
-        '布放方位': ['左侧(Leading)'],
-        '贴合误差(mm)': [0.12],
-        '作业结果': ['✅ 成功']
+    st.session_state.history_db = pd.DataFrame()
+
+# 3. 侧边栏：输入车次
+with st.sidebar:
+    st.header("🤖 机器人状态遥测")
+    train_id = st.text_input("输入当前作业车次", value="G8021-重载")
+    battery = st.slider("剩余电量", 0, 100, 85)
+    st.markdown("---")
+    st.info("检测到新车次输入后，系统将自动同步历史台账")
+
+# --- 【核心逻辑：自动感应车次变换并生成历史】 ---
+if train_id != st.session_state.current_train:
+    # 1. 更新当前车次记录
+    st.session_state.current_train = train_id
+    
+    # 2. 模拟生成该车次的 4 条错开时间的历史记录
+    base_time = datetime.now()
+    new_data = pd.DataFrame({
+        '记录时间': [
+            (base_time - timedelta(minutes=45)).strftime("%H:%M:%S"),
+            (base_time - timedelta(minutes=30)).strftime("%H:%M:%S"),
+            (base_time - timedelta(minutes=15)).strftime("%H:%M:%S"),
+            (base_time - timedelta(seconds=10)).strftime("%H:%M:%S")
+        ],
+        '车次编号': [train_id] * 4,
+        '目标轴位': ['1号轴', '2号轴', '3号轴', '4号轴'],
+        '铁鞋状态': ['✅ 已收回(归位)', '✅ 已收回(归位)', '🔒 已布放(锁死)', '⚠️ 作业中'],
+        '夹紧压力(kN)': [15.2, 14.8, 15.6, 8.4],
+        '对位误差(mm)': [0.11, 0.08, 0.13, 0.45]
     })
+    # 存入 Session 供演示
+    st.session_state.history_db = new_data
+    st.toast(f"检测到新车次 {train_id}，已调取作业历史数据")
 
-# --- 【核心修改：添加新记录的按钮】 ---
-col_btn1, col_btn2 = st.columns([1, 4])
-with col_btn1:
-    if st.button("💾 提交当前作业记录"):
-        # 创建新的一行数据
-        new_record = pd.DataFrame({
-            '记录时间': [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-            '车次编号': [train_id], # 使用侧边栏输入的车次
-            '目标轴位': [f"{np.random.randint(1,5)}号轴"], # 模拟自动分配轴位
-            '布放方位': [np.random.choice(['左侧(Leading)', '右侧(Trailing)'])],
-            '贴合误差(mm)': [round(np.random.uniform(0.05, 0.35), 2)],
-            '作业结果': ['✅ 成功']
-        })
-        # 将新数据拼接到缓存数据库中
-        st.session_state.history_db = pd.concat([new_record, st.session_state.history_db], ignore_index=True)
-        st.toast(f"记录已存入台账：{train_id}")
+# 4. 主界面展示
+st.title("🚄 轨道机器人防溜作业数字孪生大屏")
+st.markdown(f"**中南大学控制工程实验室** | 监控目标：`{train_id}`")
 
-# --- 显示表格 ---
-# 始终显示缓存数据库里的所有内容
+# 顶部指标
+c1, c2, c3 = st.columns(3)
+c1.metric("系统电量", f"{battery}%")
+c2.metric("当前轴位", "4号轴")
+c3.metric("总计完成", f"{len(st.session_state.history_db)}/4")
+
+st.markdown("---")
+
+# 5. 实时压力折线图 (保留你的创意)
+st.subheader("📊 实时铁鞋压力监测 (数据流)")
+chart_data = pd.DataFrame(
+    np.random.randn(20, 2) * 0.3 + 15,
+    columns=['左侧压力', '右侧压力']
+)
+st.line_chart(chart_data, height=200)
+
+# 6. 自动化报表展示 (核心演示区)
+st.subheader("📑 铁鞋作业历史数据报表 (自动生成)")
+# 实时显示根据车次感应生成的表格
 st.dataframe(st.session_state.history_db, use_container_width=True)
+
+# 下载功能
+csv = st.session_state.history_db.to_csv(index=False).encode('utf-8-sig')
+st.download_button(
+    label="📥 导出本批次作业报表 (CSV)",
+    data=csv,
+    file_name=f"Report_{train_id}.csv",
+    mime='text/csv'
+)
+
+# 7. 作业日志 (增加收回逻辑描述)
+with st.expander("🔍 查看实时指令日志", expanded=True):
+    last_log_time = st.session_state.history_db.iloc[-1]['记录时间']
+    st.code(f"""
+    [{last_log_time}] [INFO] 识别到车次 {train_id} 进入作业区
+    [{last_log_time}] [ACTION] 1号、2号轴防溜铁鞋已完成撤回任务，传感器状态：归位
+    [{last_log_time}] [ACTION] 3号轴铁鞋已锁定，压力反馈 15.6kN
+    [{datetime.now().strftime("%H:%M:%S")}] [DEBUG] 4号轴正在进行视觉对位，请注意安全距离...
+    """)
 
 # --- 【核心修改：动态导出下载】 ---
 csv_data = st.session_state.history_db.to_csv(index=False).encode('utf-8-sig')
