@@ -67,15 +67,7 @@ with st.sidebar:
         b_color = "#EF4444"  # 红色 (警示)
         b_status = "🚨 电量过低"
 
-    # 2. 使用 HTML 渲染带颜色的文本
-    st.markdown(f"""
-        <div style="padding:10px; border-radius:5px; background-color:{b_color}22; border:1px solid {b_color};">
-            <strong style="color:{b_color};">{b_status}</strong><br>
-            <span style="font-size:20px; font-weight:bold; color:{b_color};">{battery}%</span>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # 保持原有的滑动条，方便演示切换
+   
     battery = st.slider("模拟电量调节", 0, 100, battery)
     st.progress(battery / 100)
     
