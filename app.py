@@ -8,7 +8,7 @@ from datetime import datetime, timedelta  # 核心：必须加上这个 timedelt
 # ==========================================
 # 1. 页面配置与中南大学主题风格 (淡蓝色工业风)
 # ==========================================
-st.set_page_config(page_title="中南大学-轨道机器人监控", layout="wide")
+st.set_page_config(page_title="中南大学交通运输工程学院", layout="wide")
 
 # 自定义 CSS 样式
 st.markdown("""
@@ -195,4 +195,4 @@ with st.expander("🔍 查看实时动作检测日志", expanded=True):
 
 # 页脚
 st.markdown("---")
-st.markdown('<center style="color: #94A3B8;">中南大学控制工程实验室 | 轨道机器人数字化监测平台 v2.5</center>', unsafe_allow_html=True)
+st.markdown('<center style="color: #94A3B8;">中南大学交通运输工程学院 | 轨道防溜机器人数字化监测平台 v2.5</center>', unsafe_allow_html=True)
